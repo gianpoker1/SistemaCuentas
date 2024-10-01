@@ -1,8 +1,11 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://xmlns.jcp.org/jsf/html"
-      xmlns:f="http://xmlns.jcp.org/jsf/core"
-      xmlns:p="http://primefaces.org/ui">
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:pt="jakarta.faces.passthrough"
+      xmlns:jsf="jakarta.faces"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="primefaces">
 <h:head>
     <title>Sistema de cuentas</title>
     <link rel="stylesheet" href="https://unpkg.com/primeflex@latest/primeflex.css"/>
@@ -11,15 +14,124 @@
 </h:head>
 <h:body>
     <div class="card">
-        <div class="flex justify-content-center
+        <h:form id="forma-cuentas">
+            <p:growl id="mensajes" showDetail="true"/>
+            <div class="card">
+                <p:menubar>
+                    <p:menuitem value="Inicio" icon="pi pi-fw pi-user"
+                                update=":forma-cuentas:cuentas-tabla"
+                                actionListener="#{indexController.cargarData}"/>
+                    <p:menuitem value="Nueva Cuenta" icon="pi pi-fw pi-plus"
+                                actionListener="#{indexController.agregarCuenta}"
+                                update=":forma-modal:cuenta-ventana"
+                                oncomplete="PF('ventanaModalCuenta').show()"/>
+                </p:menubar>
+            </div>
+<!--     Tabla       -->
+            <div class="card">
+                <p:dataTable value="#{indexController.cuentas}" var="cuenta" id="cuentas-tabla"
+                            widgetVar="cuentasTabla">
+                    <f:facet name="header">
+                        <div class="flex justify-content-center
                     flex-wrap card-container yellow-container">
-            <h3>Sistema de Cuentas Bancarias</h3>
-        </div>
-        <div class="card">
-            <p:dataTable value="#{indexController.cuentas}" var="cuenta">
+                            <div class="flex align-items-center justify-content-center
+                                    w-20rem h-4rem bg-yellow-500 font-bold text-gray-900
+                                    border-round m-2">
+                                <h3>Sistema de Cuentas Bancarias</h3>
+                            </div>
+                        </div>
+                    </f:facet>
+                    <p:column headerText="Id">
+                        <h:outputText value="#{cuenta.idCuenta}" />
+                    </p:column>
+                    <p:column headerText="Nombre">
+                        <h:outputText value="#{cuenta.cliente}" />
+                    </p:column>
+                    <p:column headerText="Tipo de Cuenta">
+                        <h:outputText value="#{cuenta.tipo}" />
+                    </p:column>
+                    <p:column headerText="Saldo">
+                        <h:outputText value="#{cuenta.saldo}" >
+                            <f:convertNumber type="currency" currencySymbol="€"/>
+                        </h:outputText>
+                    </p:column>
+                    <!--  Abrimos el modal "Detalles cuenta con la data de la cuenta a editar  -->
+                    <p:column>
+                        <p:commandButton value="Editar" icon="pi pi-pencil"
+                                         update=":forma-modal:cuenta-ventana"
+                                         oncomplete="PF('ventanaModalCuenta').show()"
+                                         process="@this"
+                                         class="ui-button-primary" style="margin-right: .5rem" >
+                            <f:setPropertyActionListener target="#{indexController.cuentaSeleccionada}"
+                                                         value="#{cuenta}" />
+                            <p:resetInput target=":forma-modal:cuenta-ventana" />
+                        </p:commandButton>
+                        <!-- Boton eliminar  -->
+                        <p:commandButton value="Eliminar" class="ui-button-danger"
+                                        icon="pi pi-trash" process="@this"
+                                        oncomplete="PF('eliminarCuentaVentana').show()">
+                            <!--Se establece la cuenta en el objeto cuentaSeleccionada-->
+                            <f:setPropertyActionListener target="#{indexController.cuentaSeleccionada}"
+                                                         value="#{cuenta}" />
+                        </p:commandButton>
 
-            </p:dataTable>
-        </div>
+
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+<!--   Modal Editar    -->
+        <h:form id="forma-modal">
+            <p:dialog header="Detalles Cuenta" showEffect="fade"
+                      modal="true" widgetVar="ventanaModalCuenta"
+                      responsive="true">
+                <p:outputPanel id="cuenta-ventana" class="ui-fluid">
+                    <div class="field">
+                        <p:outputLabel for="nombre">Nombre</p:outputLabel>
+                        <p:inputText id="nombre"
+                                     value="#{indexController.cuentaSeleccionada.cliente}"
+                                     required="true" />
+                    </div>
+                    <div class="field">
+                        <p:outputLabel for="tipoCuenta">Tipo Cuenta</p:outputLabel>
+                        <p:selectOneMenu id="tipoCuenta"
+                                     value="#{indexController.cuentaSeleccionada.tipo}">
+                            <f:selectItem itemLabel="Selecciona" itemValue="" />
+                            <f:selectItem itemLabel="Ahorro" itemValue="Ahorro" />
+                            <f:selectItem itemLabel="Inversion" itemValue="Inversion" />
+                            <f:selectItem itemLabel="Credito" itemValue="Credito" />
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="field">
+                        <p:outputLabel for="saldo">Saldo</p:outputLabel>
+                        <p:inputNumber id="saldo"
+                                       value="#{indexController.cuentaSeleccionada.saldo}"/>
+                    </div>
+                </p:outputPanel>
+<!--      Botones  Modal        -->
+                <f:facet name="footer">
+                    <p:commandButton value="Guardar" icon="pi pi-check"
+                                     process="cuenta-ventana @this"
+                                     actionListener="#{indexController.guardarCuenta}" />
+                    <p:commandButton value="Cancelar" icon="pi pi-times"
+                                     onclick="PF('ventanaModalCuenta').hide()"
+                                     class="ui-button-secondary" type="button" />
+                </f:facet>
+            </p:dialog>
+            <p:confirmDialog widgetVar="eliminarCuentaVentana" showEffect="fade"
+                             width="300" message="Eliminar Cuenta?"
+                             header="Confirmar" severity="warn">
+                <p:commandButton value="Si" icon="pi pi-check"
+                                 actionListener="#{indexController.eliminarCuenta}"
+                                 process="@this"
+                                 oncomplete="PF('eliminarCuentaVentana').hide()"/>
+                <p:commandButton value="No" type="button"
+                                 styleClass="ui-button-secondary"
+                                 icon="pi pi-times"
+                                 onclick="PF('eliminarCuentaVentana').hide()"/>
+            </p:confirmDialog>
+        </h:form>
     </div>
+
 </h:body>
 </html>
